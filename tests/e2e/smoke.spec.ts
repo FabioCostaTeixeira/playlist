@@ -1,0 +1,4 @@
+import { expect, test } from "@playwright/test";
+
+test("central demonstração é navegável", async ({ page }, testInfo) => { await page.goto("/dashboard"); await expect(page.getByRole("heading", { name: /Bom dia/ })).toBeVisible(); if (testInfo.project.name === "mobile") { await page.getByRole("button", { name: "Abrir menu" }).click(); await page.getByRole("dialog").getByRole("link", { name: "Conteúdos" }).click(); } else { await page.getByRole("link", { name: "Conteúdos" }).click(); } await expect(page).toHaveURL(/\/conteudos$/); await expect(page.getByRole("heading", { name: "Biblioteca de conteúdos" })).toBeVisible(); });
+test("player mostra ativação legível", async ({ page }) => { await page.goto("/player"); await expect(page.getByRole("heading", { name: "Ativar tela" })).toBeVisible(); await expect(page.getByLabel("Código de ativação")).toBeVisible(); });
