@@ -14,7 +14,7 @@ npm run db:seed
 npm run dev
 ```
 
-Sem `DATABASE_URL`, central abre em modo demonstração, sem persistir dados. Player real, autenticação e mutações exigem ambiente configurado.
+Sem `DATABASE_URL`, a central não exibe dados fictícios e as operações ficam indisponíveis. Player, autenticação e mutações exigem ambiente configurado.
 
 ## Portão de qualidade
 

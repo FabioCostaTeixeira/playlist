@@ -3,22 +3,36 @@ import { permissionFor, requireActor } from "@/server/access";
 import { audit } from "@/server/audit";
 import { deleteResource, updateResource } from "@/server/resources";
 import { resourceName } from "@/shared/schemas";
+import { z } from "zod";
 
-export async function PATCH(request: Request, context: { params: Promise<{ resource: string; id: string }> }) {
+export async function PATCH(
+  request: Request,
+  context: { params: Promise<{ resource: string; id: string }> },
+) {
   return api(async () => {
-    const { resource: raw, id } = await context.params;
+    const { resource: raw, id: rawId } = await context.params;
+    const id = z.uuid().parse(rawId);
     const resource = resourceName.parse(raw);
     const actor = await requireActor(permissionFor(resource));
-    const row = await updateResource(resource, id, actor.organizationId, await request.json());
+    const row = await updateResource(
+      resource,
+      id,
+      actor.organizationId,
+      await request.json(),
+    );
     if (!row) throw new Response("Não encontrado", { status: 404 });
     await audit(actor, "update", resource, id, undefined, row);
     return row;
   });
 }
 
-export async function DELETE(_request: Request, context: { params: Promise<{ resource: string; id: string }> }) {
+export async function DELETE(
+  _request: Request,
+  context: { params: Promise<{ resource: string; id: string }> },
+) {
   return api(async () => {
-    const { resource: raw, id } = await context.params;
+    const { resource: raw, id: rawId } = await context.params;
+    const id = z.uuid().parse(rawId);
     const resource = resourceName.parse(raw);
     const actor = await requireActor(permissionFor(resource));
     const row = await deleteResource(resource, id, actor.organizationId);
