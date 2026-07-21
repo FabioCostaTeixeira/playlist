@@ -1,0 +1,6 @@
+{
+  "ci": {
+    "collect": { "startServerCommand": "npm run start", "url": ["http://localhost:3000/dashboard", "http://localhost:3000/player"], "numberOfRuns": 1 },
+    "assert": { "assertions": { "categories:accessibility": ["error", { "minScore": 0.9 }], "categories:best-practices": ["warn", { "minScore": 0.9 }], "categories:performance": ["warn", { "minScore": 0.75 }] } }
+  }
+}

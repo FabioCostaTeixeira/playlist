@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Playlist — Digital Signage
 
-## Getting Started
+Central administrativa e player PWA para digital signage. Next.js App Router, Better Auth, Drizzle/Neon e Vercel Blob.
 
-First, run the development server:
+## Execução local
+
+Requisitos: Node.js 20.9+, PostgreSQL Neon e store público Vercel Blob.
 
 ```bash
+npm install
+copy .env.example .env.local
+npm run db:migrate
+npm run db:seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Sem `DATABASE_URL`, central abre em modo demonstração, sem persistir dados. Player real, autenticação e mutações exigem ambiente configurado.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Portão de qualidade
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run typecheck
+npm run test
+npm run test:integration
+npm run test:security
+npm run build
+npm run test:e2e
+npm run test:performance
+```
 
-## Learn More
+## Fluxo operacional
 
-To learn more about Next.js, take a look at the following resources:
+1. Administrador cadastra conteúdo e monta playlist.
+2. Publicação cria manifesto imutável no Blob e ponteiro pequeno por canal.
+3. Dispositivo é cadastrado; operador gera código de seis dígitos válido por 10 minutos.
+4. Player ativa uma única vez e guarda credencial no IndexedDB.
+5. Bootstrap autenticado entrega URL do ponteiro. Rotação e sincronização passam a usar CDN, sem Neon.
+6. Heartbeat ocorre a cada cinco minutos; telemetria aceita lotes idempotentes.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Documentação: [arquitetura](docs/ARCHITECTURE.md), [segurança](docs/SECURITY.md), [deploy](docs/DEPLOYMENT.md), [operação](docs/OPERATIONS.md) e [status](docs/STATUS.md).
