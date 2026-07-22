@@ -5,6 +5,12 @@ import Image from "next/image";
 import { Expand, LoaderCircle, MonitorUp, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  explainBootstrapFailure,
+  isReachable,
+  PlayerSyncError,
+  syncFailureMessage,
+} from "@/features/player/sync-status";
 
 type Item = {
   id: string;
@@ -87,7 +93,11 @@ export function PlayerEngine() {
     if (!token) return;
     try {
       const bootstrapResponse = await authFetch("/api/player/bootstrap");
-      if (!bootstrapResponse.ok) throw new Error("bootstrap_failed");
+      if (!bootstrapResponse.ok)
+        throw explainBootstrapFailure(
+          bootstrapResponse.status,
+          await bootstrapResponse.text().catch(() => ""),
+        );
       const data = (await bootstrapResponse.json()) as Bootstrap;
       let next = data.manifest;
       if (data.manifest) {
@@ -95,7 +105,10 @@ export function PlayerEngine() {
         etagRef.current = "";
       }
       if (!next) {
-        if (!data.pointerUrl) throw new Error("pointer_missing");
+        if (!data.pointerUrl)
+          throw new PlayerSyncError(
+            "A programação desta tela ainda não foi publicada na central.",
+          );
         if (pointerRef.current !== data.pointerUrl) {
           pointerRef.current = data.pointerUrl;
           etagRef.current = "";
@@ -139,10 +152,11 @@ export function PlayerEngine() {
       failuresRef.current = 0;
       await storeValue("manifest", next);
       await cacheMedia(next);
-    } catch {
+    } catch (error) {
       failuresRef.current += 1;
-      setOnline(false);
-      setMessage("Sem conexão. Reproduzindo última programação válida.");
+      // A central recusando com um motivo não significa rede fora do ar.
+      setOnline(isReachable(error));
+      setMessage(syncFailureMessage(error, Boolean(manifest?.items?.length)));
     }
   }, [authFetch, manifest, token]);
 
