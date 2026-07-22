@@ -11,25 +11,46 @@ import {
 
 beforeEach(() => execute.mockReset());
 
-describe("consumeRateLimit", () => {
-  it("permite quando a contagem está dentro do limite", async () => {
-    execute.mockResolvedValue([{ count: 1, retry_after: 300 }]);
-    await expect(
-      consumeRateLimit("k", { max: 10, windowMs: 300_000 }),
-    ).resolves.toEqual({
-      allowed: true,
-      retryAfter: 300,
-    });
-  });
+/**
+ * O driver neon-http usado em produção devolve `{ rows: [...] }`, enquanto
+ * outros drivers devolvem o array direto. Ambos os formatos são exercitados:
+ * tratar só o array fazia o login quebrar com 500 em produção.
+ */
+const shapes = {
+  "objeto com rows (neon-http)": (rows: unknown[]) => ({
+    rows,
+    rowCount: rows.length,
+  }),
+  "array direto": (rows: unknown[]) => rows,
+};
 
-  it("bloqueia quando a contagem ultrapassa o limite", async () => {
-    execute.mockResolvedValue([{ count: 11, retry_after: 240 }]);
-    const decision = await consumeRateLimit("k", {
-      max: 10,
-      windowMs: 300_000,
+describe("consumeRateLimit", () => {
+  for (const [shape, wrap] of Object.entries(shapes)) {
+    it(`permite quando a contagem está dentro do limite — ${shape}`, async () => {
+      execute.mockResolvedValue(wrap([{ count: 1, retry_after: 300 }]));
+      await expect(
+        consumeRateLimit("k", { max: 10, windowMs: 300_000 }),
+      ).resolves.toEqual({ allowed: true, retryAfter: 300 });
     });
-    expect(decision.allowed).toBe(false);
-    expect(decision.retryAfter).toBe(240);
+
+    it(`bloqueia quando a contagem ultrapassa o limite — ${shape}`, async () => {
+      execute.mockResolvedValue(wrap([{ count: 11, retry_after: 240 }]));
+      const decision = await consumeRateLimit("k", {
+        max: 10,
+        windowMs: 300_000,
+      });
+      expect(decision.allowed).toBe(false);
+      expect(decision.retryAfter).toBe(240);
+    });
+  }
+
+  it("não quebra se o retorno vier vazio ou em formato inesperado", async () => {
+    for (const result of [{ rows: [] }, [], null, undefined, {}]) {
+      execute.mockResolvedValue(result);
+      await expect(
+        consumeRateLimit("k", { max: 10, windowMs: 300_000 }),
+      ).resolves.toEqual({ allowed: true, retryAfter: 300 });
+    }
   });
 });
 

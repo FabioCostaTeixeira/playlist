@@ -5,6 +5,18 @@ import { getDb } from "@/db";
 export type RateLimitRule = { max: number; windowMs: number };
 export type RateLimitDecision = { allowed: boolean; retryAfter: number };
 
+type CountRow = { count: number; retry_after: number };
+
+/**
+ * Normaliza o retorno de `execute`. O driver neon-http devolve um objeto de
+ * resultado com `rows`, enquanto outros drivers devolvem o array direto.
+ */
+function rowsOf(result: unknown): CountRow[] {
+  if (Array.isArray(result)) return result as CountRow[];
+  const rows = (result as { rows?: unknown })?.rows;
+  return Array.isArray(rows) ? (rows as CountRow[]) : [];
+}
+
 /**
  * Atomic, serverless-safe rate limiter backed by the `rate_limits` table.
  * A single INSERT ... ON CONFLICT statement increments the counter and resets
@@ -16,7 +28,7 @@ export async function consumeRateLimit(
   rule: RateLimitRule,
 ): Promise<RateLimitDecision> {
   const seconds = Math.max(1, Math.ceil(rule.windowMs / 1000));
-  const [row] = (await getDb().execute(sql`
+  const result = await getDb().execute(sql`
     INSERT INTO rate_limits (key, count, expires_at)
     VALUES (${key}, 1, now() + (${seconds} * interval '1 second'))
     ON CONFLICT (key) DO UPDATE SET
@@ -25,7 +37,8 @@ export async function consumeRateLimit(
         THEN now() + (${seconds} * interval '1 second')
         ELSE rate_limits.expires_at END
     RETURNING count, extract(epoch from (expires_at - now()))::int AS retry_after
-  `)) as unknown as Array<{ count: number; retry_after: number }>;
+  `);
+  const [row] = rowsOf(result);
   const count = Number(row?.count ?? 1);
   const retryAfter = Math.max(0, Number(row?.retry_after ?? seconds));
   await pruneExpired();

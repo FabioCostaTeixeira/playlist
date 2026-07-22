@@ -52,7 +52,11 @@ test("cria dispositivo com código, edita, persiste e exclui", async ({
       name: "Código de pareamento",
     });
     await expect(pairingDialog).toBeVisible();
-    await expect(pairingDialog).toContainText(/\b\d{6}\b/);
+    // Alvo no próprio elemento do código: o texto do diálogo sai concatenado
+    // com a descrição, então uma fronteira de palavra nunca casaria no fim.
+    await expect(pairingDialog.getByTestId("pairing-code")).toHaveText(
+      /^\d{6}$/,
+    );
     await pairingDialog.getByRole("button", { name: "Concluído" }).click();
 
     let row = page.getByRole("row", { name: new RegExp(name) });

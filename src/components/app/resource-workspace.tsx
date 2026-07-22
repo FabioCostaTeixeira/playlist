@@ -960,7 +960,10 @@ export function ResourceWorkspace({
               em 10 minutos e só pode ser usado uma vez.
             </DialogDescription>
           </DialogHeader>
-          <div className="rounded-xl border bg-muted/40 py-6 text-center font-mono text-4xl font-bold tracking-[0.3em]">
+          <div
+            data-testid="pairing-code"
+            className="rounded-xl border bg-muted/40 py-6 text-center font-mono text-4xl font-bold tracking-[0.3em]"
+          >
             {pairing?.code}
           </div>
           <p className="text-center text-xs text-muted-foreground">
