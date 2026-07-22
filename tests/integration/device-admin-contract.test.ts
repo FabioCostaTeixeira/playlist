@@ -34,15 +34,15 @@ describe("administração de dispositivos", () => {
 
   it("exibe um código temporário após criar e permite gerar outro", () => {
     const workspace = read("src/components/app/resource-workspace.tsx");
-    const pairingRoute = read(
-      "src/app/api/admin/devices/[id]/pair/route.ts",
-    );
+    const pairingRoute = read("src/app/api/admin/devices/[id]/pair/route.ts");
 
-    expect(workspace).toContain("if (kind === \"devices\" && !editing)");
+    expect(workspace).toContain('if (kind === "devices" && !editing)');
     expect(workspace).toContain("await pairDevice(saved)");
     expect(workspace).toContain("pairing?.code");
     expect(workspace).toContain("Gerar novo código");
-    expect(pairingRoute).toContain("eq(devices.organizationId, actor.organizationId)");
+    expect(pairingRoute).toContain(
+      "eq(devices.organizationId, actor.organizationId)",
+    );
     expect(pairingRoute).toContain("generatePairingCode()");
   });
 

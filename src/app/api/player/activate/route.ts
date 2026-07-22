@@ -2,11 +2,16 @@ import { and, eq, gt, isNull, lt, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { devices, deviceTokens, pairingCodes } from "@/db/schema";
 import { api } from "@/server/http";
+import { clientIp, enforceRateLimit } from "@/server/rate-limit";
 import { generateDeviceToken, sha256 } from "@/server/security";
 import { pairingInput } from "@/shared/schemas";
 
 export async function POST(request: Request) {
   return api(async () => {
+    await enforceRateLimit(`activate:${clientIp(request)}`, {
+      max: 10,
+      windowMs: 10 * 60_000,
+    });
     const { code } = pairingInput.parse(await request.json());
     const codeHash = sha256(code);
     await getDb().update(pairingCodes).set({ attempts: sql`${pairingCodes.attempts} + 1` }).where(and(eq(pairingCodes.codeHash, codeHash), lt(pairingCodes.attempts, 5)));

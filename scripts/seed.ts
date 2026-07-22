@@ -4,21 +4,21 @@ import { eq } from "drizzle-orm";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import * as schema from "../src/db/schema";
+import { validateBootstrapCredentials } from "../src/shared/bootstrap";
 
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error("DATABASE_URL obrigatória");
+  // Valida antes de abrir conexão: nada é escrito com credencial de exemplo.
+  const { email, password, secret } = validateBootstrapCredentials({
+    BOOTSTRAP_ADMIN_EMAIL: process.env.BOOTSTRAP_ADMIN_EMAIL,
+    BOOTSTRAP_ADMIN_PASSWORD: process.env.BOOTSTRAP_ADMIN_PASSWORD,
+    BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
+  });
   const db = drizzle(neon(databaseUrl), { schema });
-  const email = (
-    process.env.BOOTSTRAP_ADMIN_EMAIL ?? "admin@example.com"
-  ).toLowerCase();
-  const password = process.env.BOOTSTRAP_ADMIN_PASSWORD;
-  if (!password || password.length < 12) {
-    throw new Error("BOOTSTRAP_ADMIN_PASSWORD precisa ter 12+ caracteres");
-  }
   const auth = betterAuth({
     database: drizzleAdapter(db, { provider: "pg", schema }),
-    secret: process.env.BETTER_AUTH_SECRET,
+    secret,
     emailAndPassword: { enabled: true, minPasswordLength: 12 },
   });
 
@@ -45,8 +45,7 @@ async function main() {
     [organization] = await db
       .insert(schema.organizations)
       .values({
-        name:
-          process.env.BOOTSTRAP_ORGANIZATION_NAME ?? "Minha organização",
+        name: process.env.BOOTSTRAP_ORGANIZATION_NAME ?? "Minha organização",
         slug,
       })
       .returning();

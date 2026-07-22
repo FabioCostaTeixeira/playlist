@@ -286,3 +286,9 @@ export const playbackEventBatches = pgTable(
   },
   (table) => [index("playback_device_received_idx").on(table.deviceId, table.receivedAt)],
 );
+
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  count: integer("count").default(0).notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+});

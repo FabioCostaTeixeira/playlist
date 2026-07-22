@@ -1,4 +1,5 @@
 import { ZodError } from "zod";
+import { captureException } from "@/server/observability";
 
 export async function api<T>(work: () => Promise<T>) {
   try {
@@ -30,12 +31,7 @@ export async function api<T>(work: () => Promise<T>) {
         { error: "Já existe um registro com estes dados." },
         { status: 409 },
       );
-    console.error(
-      "api_error",
-      error instanceof Error
-        ? { name: error.name, message: error.message }
-        : { name: "unknown" },
-    );
-    return Response.json({ error: "Falha interna" }, { status: 500 });
+    const eventId = await captureException(error);
+    return Response.json({ error: "Falha interna", eventId }, { status: 500 });
   }
 }
