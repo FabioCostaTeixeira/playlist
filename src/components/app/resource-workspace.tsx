@@ -191,6 +191,13 @@ export function ResourceWorkspace({
   const [playlistItems, setPlaylistItems] = useState<
     Array<{ contentId: string; durationSeconds: number }>
   >([]);
+  // Acompanha o domínio real em qualquer ambiente, sem endereço fixo no código.
+  // Só é exibido dentro do diálogo, que nunca renderiza no servidor, então não
+  // há divergência de hidratação.
+  const playerUrl =
+    typeof window === "undefined"
+      ? "/player"
+      : `${window.location.origin}/player`;
   const text = copy[kind];
 
   const load = useCallback(async () => {
@@ -954,20 +961,54 @@ export function ResourceWorkspace({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Código de pareamento</DialogTitle>
+            <DialogTitle>Ative a tela {pairing?.deviceName}</DialogTitle>
             <DialogDescription>
-              Digite este código no player de {pairing?.deviceName}. Ele expira
-              em 10 minutos e só pode ser usado uma vez.
+              Faça isto na própria tela que vai exibir o conteúdo. O código vale
+              uma única vez e expira em 10 minutos.
             </DialogDescription>
           </DialogHeader>
-          <div
-            data-testid="pairing-code"
-            className="rounded-xl border bg-muted/40 py-6 text-center font-mono text-4xl font-bold tracking-[0.3em]"
-          >
-            {pairing?.code}
-          </div>
+
+          <ol className="space-y-3 text-sm">
+            <li>
+              <p className="mb-1.5">
+                <span className="font-medium">1.</span> Abra este endereço no
+                navegador da tela:
+              </p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 truncate rounded-lg border bg-muted/40 px-3 py-2 font-mono text-xs">
+                  {playerUrl}
+                </code>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard
+                      .writeText(playerUrl)
+                      .then(() => toast.success("Endereço copiado"))
+                      .catch(() => toast.error("Não foi possível copiar"));
+                  }}
+                >
+                  Copiar
+                </Button>
+              </div>
+            </li>
+            <li>
+              <p className="mb-1.5">
+                <span className="font-medium">2.</span> Digite este código lá:
+              </p>
+              <div
+                data-testid="pairing-code"
+                className="rounded-xl border bg-muted/40 py-6 text-center font-mono text-4xl font-bold tracking-[0.3em]"
+              >
+                {pairing?.code}
+              </div>
+            </li>
+          </ol>
+
           <p className="text-center text-xs text-muted-foreground">
-            Expira em {formatDate(pairing?.expiresAt)}
+            Expira em {formatDate(pairing?.expiresAt)}. Depois de ativada, a
+            tela se conecta sozinha e não pede código de novo.
           </p>
           <DialogFooter>
             <Button onClick={() => setPairing(null)}>Concluído</Button>

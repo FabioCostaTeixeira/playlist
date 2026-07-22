@@ -49,7 +49,7 @@ test("cria dispositivo com código, edita, persiste e exclui", async ({
     deviceId = ((await response.json()) as { id: string }).id;
 
     const pairingDialog = page.getByRole("dialog", {
-      name: "Código de pareamento",
+      name: new RegExp(`Ative a tela ${name}`),
     });
     await expect(pairingDialog).toBeVisible();
     // Alvo no próprio elemento do código: o texto do diálogo sai concatenado
@@ -57,6 +57,8 @@ test("cria dispositivo com código, edita, persiste e exclui", async ({
     await expect(pairingDialog.getByTestId("pairing-code")).toHaveText(
       /^\d{6}$/,
     );
+    // O instalador precisa saber em que endereço digitar o código.
+    await expect(pairingDialog).toContainText("/player");
     await pairingDialog.getByRole("button", { name: "Concluído" }).click();
 
     let row = page.getByRole("row", { name: new RegExp(name) });
