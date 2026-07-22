@@ -959,7 +959,7 @@ export function ResourceWorkspace({
           if (!value) setPairing(null);
         }}
       >
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Ative a tela {pairing?.deviceName}</DialogTitle>
             <DialogDescription>
@@ -975,7 +975,9 @@ export function ResourceWorkspace({
                 navegador da tela:
               </p>
               <div className="flex items-center gap-2">
-                <code className="flex-1 truncate rounded-lg border bg-muted/40 px-3 py-2 font-mono text-xs">
+                {/* Quebra em vez de cortar: o endereço precisa ser legível
+                    por inteiro para quem vai digitar na outra tela. */}
+                <code className="min-w-0 flex-1 rounded-lg border bg-muted/40 px-3 py-2 font-mono text-xs break-all">
                   {playerUrl}
                 </code>
                 <Button
@@ -997,9 +999,15 @@ export function ResourceWorkspace({
               <p className="mb-1.5">
                 <span className="font-medium">2.</span> Digite este código lá:
               </p>
+              {/*
+                O espaçamento entre letras também é aplicado depois do último
+                dígito. O padding à esquerda compensa essa sobra para o número
+                ficar realmente centralizado, e o tamanho acompanha a largura
+                disponível para não vazar do container em telas estreitas.
+              */}
               <div
                 data-testid="pairing-code"
-                className="rounded-xl border bg-muted/40 py-6 text-center font-mono text-4xl font-bold tracking-[0.3em]"
+                className="overflow-hidden rounded-xl border bg-muted/40 px-3 py-6 pl-[calc(0.75rem+0.3em)] text-center font-mono text-3xl font-bold tracking-[0.3em] tabular-nums sm:text-4xl"
               >
                 {pairing?.code}
               </div>
