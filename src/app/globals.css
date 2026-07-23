@@ -136,3 +136,71 @@ body {
     @apply font-sans;
   }
 }
+
+/*
+ * Palco 3D do player (double-buffer). Dois slots de conteúdo empilhados; a virada
+ * é a mudança de `data-front`, animada por transição de transform. `--flip-ms` é
+ * injetado pelo componente para casar com FLIP_DURATION_MS em rotation.ts.
+ */
+.player-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #000;
+  perspective: 2400px;
+}
+
+.player-stage-inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform var(--flip-ms, 700ms) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.player-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* fade: sem 3D, só opacidade (também é o modo de prefers-reduced-motion) */
+.player-stage[data-transition="fade"] .player-face {
+  opacity: 0;
+  transition: opacity var(--flip-ms, 700ms) ease-in-out;
+}
+.player-stage[data-transition="fade"] .player-face[data-active="true"] {
+  opacity: 1;
+}
+
+/* flip: carta virando 180° */
+.player-stage[data-transition="flip"] .player-face[data-slot="0"] {
+  transform: rotateY(0deg);
+}
+.player-stage[data-transition="flip"] .player-face[data-slot="1"] {
+  transform: rotateY(180deg);
+}
+.player-stage[data-transition="flip"][data-front="1"] .player-stage-inner {
+  transform: rotateY(-180deg);
+}
+
+/* cube: cubo girando 90° com profundidade real (lado = largura da viewport) */
+.player-stage[data-transition="cube"] .player-stage-inner {
+  transform: translateZ(-50vw);
+}
+.player-stage[data-transition="cube"] .player-face[data-slot="0"] {
+  transform: rotateY(0deg) translateZ(50vw);
+}
+.player-stage[data-transition="cube"] .player-face[data-slot="1"] {
+  transform: rotateY(90deg) translateZ(50vw);
+}
+.player-stage[data-transition="cube"][data-front="1"] .player-stage-inner {
+  transform: translateZ(-50vw) rotateY(-90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-stage-inner,
+  .player-stage[data-transition="fade"] .player-face {
+    transition-duration: 1ms;
+  }
+}

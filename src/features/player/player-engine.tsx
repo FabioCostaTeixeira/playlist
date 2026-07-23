@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { Expand, LoaderCircle, MonitorUp, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SlideStage } from "@/features/player/slide-stage";
 import {
   explainBootstrapFailure,
   isReachable,
@@ -72,10 +72,10 @@ async function cacheMedia(manifest: Manifest) {
 export function PlayerEngine() {
   const [token, setToken] = useState<string>();
   const [manifest, setManifest] = useState<Manifest>();
-  const [index, setIndex] = useState(0);
   const [online, setOnline] = useState(true);
   const [message, setMessage] = useState("Preparando player…");
   const [activating, setActivating] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
   const pointerRef = useRef("");
   const etagRef = useRef("");
   const failuresRef = useRef(0);
@@ -146,7 +146,6 @@ export function PlayerEngine() {
         return;
       }
       setManifest(next);
-      setIndex(0);
       setMessage("");
       setOnline(true);
       failuresRef.current = 0;
@@ -232,17 +231,12 @@ export function PlayerEngine() {
   }, [authFetch, token]);
 
   useEffect(() => {
-    const item = manifest?.items[index];
-    if (!item) return;
-    const next = manifest.items[(index + 1) % manifest.items.length];
-    if (next?.src && ["image", "video"].includes(next.type))
-      void fetch(next.src, { cache: "force-cache" }).catch(() => undefined);
-    const timer = window.setTimeout(
-      () => setIndex((value) => (value + 1) % manifest.items.length),
-      Math.max(3, item.durationSeconds) * 1000,
-    );
-    return () => window.clearTimeout(timer);
-  }, [index, manifest]);
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduceMotion(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
 
   async function activate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -302,7 +296,7 @@ export function PlayerEngine() {
       </main>
     );
 
-  const item = manifest?.items[index];
+  const hasItems = Boolean(manifest?.items?.length);
   return (
     <main className="relative h-screen overflow-hidden bg-black text-white">
       <div className="absolute right-4 top-4 z-20 flex items-center gap-2 opacity-20 transition hover:opacity-100">
@@ -320,7 +314,7 @@ export function PlayerEngine() {
           <span className="sr-only">Tela cheia</span>
         </Button>
       </div>
-      {!item ? (
+      {!hasItems ? (
         <div className="grid h-full place-items-center">
           <div className="text-center">
             <LoaderCircle className="mx-auto mb-3 animate-spin" />
@@ -328,51 +322,11 @@ export function PlayerEngine() {
           </div>
         </div>
       ) : (
-        <div
-          key={`${manifest.version}-${item.id}-${index}`}
-          className="relative h-full w-full animate-in fade-in duration-500"
-        >
-          {item.type === "image" && item.src && (
-            <Image
-              src={item.src}
-              alt=""
-              fill
-              unoptimized
-              sizes="100vw"
-              className="object-contain"
-            />
-          )}
-          {item.type === "video" && (
-            <video
-              src={item.src}
-              className="h-full w-full object-contain"
-              autoPlay
-              muted
-              playsInline
-              onEnded={() =>
-                setIndex((value) => (value + 1) % manifest.items.length)
-              }
-            />
-          )}
-          {item.type === "url" && (
-            <iframe
-              src={item.src}
-              title="Conteúdo externo"
-              className="h-full w-full border-0"
-              sandbox="allow-scripts allow-forms allow-popups"
-              referrerPolicy="no-referrer"
-            />
-          )}
-          {item.type === "html" && (
-            <iframe
-              srcDoc={item.html}
-              title="Conteúdo HTML"
-              className="h-full w-full border-0"
-              sandbox=""
-              referrerPolicy="no-referrer"
-            />
-          )}
-        </div>
+        <SlideStage
+          key={manifest!.version}
+          items={manifest!.items}
+          reduceMotion={reduceMotion}
+        />
       )}
       {message && manifest && (
         <p className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-4 py-2 text-xs text-zinc-300">
