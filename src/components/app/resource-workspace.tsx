@@ -50,6 +50,8 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/app/page-header";
+import { SortableItems } from "@/components/app/sortable-items";
+import { reorder } from "@/lib/reorder";
 
 type Kind = "contents" | "playlists" | "channels" | "devices";
 type Row = {
@@ -199,6 +201,17 @@ export function ResourceWorkspace({
       ? "/player"
       : `${window.location.origin}/player`;
   const text = copy[kind];
+
+  const contentName = (contentId: string) =>
+    options.contents.find((item) => item.id === contentId)?.name ?? "Conteúdo";
+  const availableContents = options.contents.filter(
+    (item) =>
+      item.status === "active" &&
+      !playlistItems.some((chosen) => chosen.contentId === item.id),
+  );
+  const hasActiveContent = options.contents.some(
+    (item) => item.status === "active",
+  );
 
   const load = useCallback(async () => {
     if (!enabled) {
@@ -1038,61 +1051,69 @@ export function ResourceWorkspace({
               a versão usada pelos dispositivos.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 py-3">
-            {options.contents
-              .filter((item) => item.status === "active")
-              .map((content) => {
-                const selected = playlistItems.some(
-                  (item) => item.contentId === content.id,
-                );
-                return (
-                  <label
-                    key={content.id}
-                    className="flex cursor-pointer items-center gap-3 rounded-lg border p-3"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selected}
-                      onChange={() => togglePlaylistContent(content.id)}
-                      className="size-4"
-                    />
-                    <span className="flex-1 text-sm font-medium">
-                      {content.name}
-                    </span>
-                    {selected && (
-                      <Input
-                        className="w-24"
-                        type="number"
-                        min={3}
-                        max={86400}
-                        value={
-                          playlistItems.find(
-                            (item) => item.contentId === content.id,
-                          )?.durationSeconds ?? 10
-                        }
-                        onChange={(event) =>
-                          setPlaylistItems((current) =>
-                            current.map((item) =>
-                              item.contentId === content.id
-                                ? {
-                                    ...item,
-                                    durationSeconds: Number(event.target.value),
-                                  }
-                                : item,
-                            ),
-                          )
-                        }
-                        aria-label={`Duração de ${content.name}`}
-                      />
-                    )}
-                  </label>
-                );
-              })}
-            {!options.contents.some((item) => item.status === "active") && (
-              <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                Ative pelo menos um conteúdo antes de montar a playlist.
+          <div className="space-y-4 py-3">
+            <section className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Programação — arraste ⠿ para ordenar
               </p>
-            )}
+              <SortableItems
+                items={playlistItems}
+                nameFor={contentName}
+                onReorder={(from, to) =>
+                  setPlaylistItems((current) => reorder(current, from, to))
+                }
+                onDurationChange={(contentId, seconds) =>
+                  setPlaylistItems((current) =>
+                    current.map((item) =>
+                      item.contentId === contentId
+                        ? { ...item, durationSeconds: seconds }
+                        : item,
+                    ),
+                  )
+                }
+                onRemove={(contentId) =>
+                  setPlaylistItems((current) =>
+                    current.filter((item) => item.contentId !== contentId),
+                  )
+                }
+              />
+            </section>
+
+            <section className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Adicionar conteúdo
+              </p>
+              {!hasActiveContent ? (
+                <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  Ative pelo menos um conteúdo antes de montar a playlist.
+                </p>
+              ) : !availableContents.length ? (
+                <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+                  Todos os conteúdos ativos já estão na programação.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {availableContents.map((content) => (
+                    <div
+                      key={content.id}
+                      className="flex items-center gap-3 rounded-lg border p-2"
+                    >
+                      <span className="flex-1 truncate text-sm">
+                        {content.name}
+                      </span>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => togglePlaylistContent(content.id)}
+                      >
+                        <Plus /> Adicionar
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
           </div>
           <DialogFooter>
             <Button
