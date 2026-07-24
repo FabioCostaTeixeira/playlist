@@ -154,7 +154,7 @@ body {
   position: absolute;
   inset: 0;
   transform-style: preserve-3d;
-  transition: transform var(--flip-ms, 700ms) cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform var(--flip-ms, 1200ms) cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .player-face {
@@ -167,7 +167,7 @@ body {
 /* fade: sem 3D, só opacidade (também é o modo de prefers-reduced-motion) */
 .player-stage[data-transition="fade"] .player-face {
   opacity: 0;
-  transition: opacity var(--flip-ms, 700ms) ease-in-out;
+  transition: opacity var(--flip-ms, 1200ms) ease-in-out;
 }
 .player-stage[data-transition="fade"] .player-face[data-active="true"] {
   opacity: 1;

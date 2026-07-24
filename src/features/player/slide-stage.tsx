@@ -46,16 +46,21 @@ export function SlideStage({
     0,
     rotating ? 1 : 0,
   ]);
+  // Espelho de slotItems para a lógica ler o valor atual sem virar dependência
+  // de efeito (senão a troca do slot escondido reiniciaria o tempo de exibição).
+  const slotItemsRef = useRef(slotItems);
 
   const readyRef = useRef<[boolean, boolean]>([false, false]);
   const armedRef = useRef(false);
   const flippedRef = useRef(false);
   const dwellTimer = useRef<number>(undefined);
   const capTimer = useRef<number>(undefined);
+  const settleTimer = useRef<number>(undefined);
 
   const clearTimers = useCallback(() => {
     window.clearTimeout(dwellTimer.current);
     window.clearTimeout(capTimer.current);
+    window.clearTimeout(settleTimer.current);
   }, []);
 
   const doFlip = useCallback(
@@ -63,21 +68,29 @@ export function SlideStage({
       if (flippedRef.current) return; // uma virada por ciclo (protege de vídeo+dwell juntos)
       flippedRef.current = true;
       armedRef.current = false;
-      clearTimers();
-      // Já entrega ao slot que sai da frente o PRÓXIMO item, que passa a
-      // pré-carregar (fresco) escondido enquanto a virada acontece.
-      const newActive = slotItems[back];
-      const leaving = other(back); // o que estava na frente
-      const upcoming = nextIndex(newActive, length);
-      readyRef.current[leaving] = false;
+      window.clearTimeout(dwellTimer.current);
+      window.clearTimeout(capTimer.current);
+
+      // Gira mostrando as DUAS faces com conteúdo real: a que sai mantém o portal
+      // atual durante todo o giro (nada de "tela desligando"), a que entra já veio
+      // pré-carregada.
       setFront(back);
-      setSlotItems((prev) => {
-        const copy: [number, number] = [prev[0], prev[1]];
-        copy[leaving] = upcoming;
-        return copy;
-      });
+
+      // Só DEPOIS que o giro termina, com o slot antigo já escondido atrás, ele é
+      // recarregado com o próximo item — pré-carregando fresco para a volta seguinte.
+      const newActive = slotItemsRef.current[back];
+      const hidden = other(back); // o que estava na frente; agora vai para trás
+      const upcoming = nextIndex(newActive, length);
+      settleTimer.current = window.setTimeout(() => {
+        readyRef.current[hidden] = false;
+        setSlotItems((prev) => {
+          const copy: [number, number] = [prev[0], prev[1]];
+          copy[hidden] = upcoming;
+          return copy;
+        });
+      }, FLIP_DURATION_MS);
     },
-    [slotItems, length, clearTimers],
+    [length],
   );
 
   const tryFlip = useCallback(
@@ -110,22 +123,26 @@ export function SlideStage({
     tryFlip(back);
   }, [front, tryFlip]);
 
+  useEffect(() => {
+    slotItemsRef.current = slotItems;
+  }, [slotItems]);
+
   // Motor do rodízio: a cada item que assume a frente, agenda o tempo de exibição.
-  // O pré-carregamento do próximo já foi disparado por `doFlip` (ou pelo estado
-  // inicial), então aqui não há setState — só o timer do dwell.
+  // Depende só de `front` (lê o item via ref), então a troca do slot escondido
+  // no fim do giro NÃO reinicia o tempo de exibição do item visível.
   useEffect(() => {
     if (!rotating) return;
     const back = other(front);
     flippedRef.current = false;
     armedRef.current = false;
-    const active = items[slotItems[front]];
+    const active = items[slotItemsRef.current[front]];
     dwellTimer.current = window.setTimeout(() => {
       armedRef.current = true;
       tryFlip(back);
     }, dwellMs(active?.durationSeconds));
 
     return () => window.clearTimeout(dwellTimer.current);
-  }, [front, slotItems, rotating, items, tryFlip]);
+  }, [front, rotating, items, tryFlip]);
 
   useEffect(() => clearTimers, [clearTimers]);
 

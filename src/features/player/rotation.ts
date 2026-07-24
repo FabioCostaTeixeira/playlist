@@ -10,8 +10,8 @@ export type TransitionKind = "cube" | "flip" | "fade";
 /** Virada padrão quando o item não escolheu uma deliberadamente. */
 export const DEFAULT_TRANSITION: TransitionKind = "cube";
 
-/** Duração da virada 3D, em ms. Deve casar com o CSS (`.player-stage-inner`). */
-export const FLIP_DURATION_MS = 700;
+/** Duração da virada 3D, em ms. Injetada no CSS via `--flip-ms` pelo SlideStage. */
+export const FLIP_DURATION_MS = 1200;
 
 /**
  * Teto de espera pelo próximo slide ficar pronto antes de virar assim mesmo.
