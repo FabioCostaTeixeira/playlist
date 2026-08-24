@@ -250,7 +250,7 @@ function SlotContent({
         src={item.src}
         title="Conteúdo externo"
         className="h-full w-full border-0"
-        sandbox="allow-scripts allow-forms allow-popups"
+        sandbox="allow-scripts allow-forms allow-popups allow-same-origin"
         referrerPolicy="no-referrer"
         onLoad={onReady}
       />
