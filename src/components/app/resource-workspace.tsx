@@ -52,6 +52,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/app/page-header";
 import { SortableItems } from "@/components/app/sortable-items";
 import { reorder } from "@/lib/reorder";
+import { prepareVideoForUpload } from "@/lib/video-prep";
 
 type Kind = "contents" | "playlists" | "channels" | "devices";
 type Row = {
@@ -182,6 +183,8 @@ export function ResourceWorkspace({
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Row | null>(null);
   const [busy, setBusy] = useState(false);
+  // Etapa exibida no botão durante conversão/envio de arquivo.
+  const [uploadStage, setUploadStage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [contentType, setContentType] = useState("url");
   const [pairing, setPairing] = useState<{
@@ -312,12 +315,24 @@ export function ResourceWorkspace({
       let payload: Record<string, unknown>;
       if (kind === "contents") {
         let blobPath = editing?.blobPath ?? null;
-        const file = form.get("file");
+        let file = form.get("file");
         if (file instanceof File && file.size > 0) {
+          if (contentType === "video") {
+            setUploadStage("Analisando vídeo…");
+            file = await prepareVideoForUpload(file, (progress) =>
+              setUploadStage(
+                `Convertendo vídeo… ${Math.round(progress * 100)}%`,
+              ),
+            );
+          }
+          setUploadStage("Enviando… 0%");
           const blob = await upload(file.name, file, {
             access: "public",
             handleUploadUrl: "/api/upload",
+            onUploadProgress: ({ percentage }) =>
+              setUploadStage(`Enviando… ${Math.round(percentage)}%`),
           });
+          setUploadStage(null);
           blobPath = blob.url;
         }
         payload = {
@@ -385,6 +400,7 @@ export function ResourceWorkspace({
       );
     } finally {
       setBusy(false);
+      setUploadStage(null);
     }
   }
 
@@ -752,10 +768,18 @@ export function ResourceWorkspace({
                         accept={
                           contentType === "image"
                             ? "image/jpeg,image/png,image/webp"
-                            : "video/mp4,video/webm"
+                            : "video/mp4,video/webm,video/quicktime,.mov,.m4v"
                         }
                         required={!editing?.blobPath}
                       />
+                      {contentType === "video" && (
+                        <p className="text-xs text-muted-foreground">
+                          MP4, WebM ou MOV. Vídeos de celular (MOV/HEVC) e
+                          arquivos muito pesados são convertidos para MP4 antes
+                          do envio, mantendo a resolução — deixe esta janela
+                          aberta até terminar.
+                        </p>
+                      )}
                     </div>
                   )}
                   <div className="grid grid-cols-2 gap-3">
@@ -959,7 +983,7 @@ export function ResourceWorkspace({
                 Cancelar
               </Button>
               <Button type="submit" disabled={busy}>
-                {busy ? "Salvando…" : "Salvar"}
+                {busy ? (uploadStage ?? "Salvando…") : "Salvar"}
               </Button>
             </DialogFooter>
           </form>
