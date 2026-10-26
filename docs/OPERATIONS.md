@@ -2,6 +2,8 @@
 
 ## Rotina
 
+- `GET /api/health/live` é liveness: responde `200` sem tocar no banco. Playwright e consumidores que só precisam saber se o processo subiu devem usar esta rota.
+- `GET /api/health` é readiness/diagnóstico: verifica `select 1` no Postgres com timeout de 3 segundos; se estourar, a consulta é cancelada no servidor. Responde `200` e `{"status":"ok","database":"ok"}` quando banco está saudável; responde `503`, `status: "degraded"` e `database: "unavailable"` quando banco configurado está inacessível. Sem `DATABASE_URL`, responde `200`, `status: "degraded"` e `database: "not_configured"`, pois esta instalação não declarou dependência de banco; monitoração que exige banco deve validar esse campo. Corpo nunca expõe erro bruto ou connection string.
 - Offline após 15 minutos sem heartbeat; intervalo padrão 5 minutos.
 - Revogar tela: bloquear dispositivo e preencher `revoked_at` em seus tokens.
 - Emergência sempre deve expirar; confirme retorno automático ao canal.
