@@ -1,9 +1,10 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
 import { eq } from "drizzle-orm";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import * as schema from "../src/db/schema";
+import { buildPostgresOptions, normalizePem } from "../src/db/connection";
 import { validateBootstrapCredentials } from "../src/shared/bootstrap";
 
 async function main() {
@@ -15,7 +16,19 @@ async function main() {
     BOOTSTRAP_ADMIN_PASSWORD: process.env.BOOTSTRAP_ADMIN_PASSWORD,
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
   });
-  const db = drizzle(neon(databaseUrl), { schema });
+  const client = postgres(databaseUrl, buildPostgresOptions(databaseUrl, normalizePem(process.env.DATABASE_CA_CERT)));
+  const db = drizzle(client, { schema });
+  try {
+    await seed(db, { email, password, secret });
+  } finally {
+    await client.end();
+  }
+}
+
+async function seed(
+  db: ReturnType<typeof drizzle<typeof schema>>,
+  { email, password, secret }: { email: string; password: string; secret: string },
+) {
   const auth = betterAuth({
     database: drizzleAdapter(db, { provider: "pg", schema }),
     secret,

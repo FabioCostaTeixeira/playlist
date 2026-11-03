@@ -13,7 +13,7 @@ export default defineConfig({
     ? undefined
     : {
         command: "npm run build && npm run start",
-        url: "http://127.0.0.1:3000/api/health",
+        url: "http://127.0.0.1:3000/api/health/live",
         reuseExistingServer: true,
         timeout: 120_000,
       },
